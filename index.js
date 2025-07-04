@@ -1,12 +1,8 @@
-// {
-//     "username": "exampleUser",
-//     "email": "example@example.com",
-//     "password": "examplePassword",
-//     "confirm_password": "examplePassword"
-// }
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const bcrypt = require('bcrypt');
+const crypto = require('crypto');
 
 const D_data = path.join(__dirname, 'data');
 const D_data_file = path.join(D_data, 'data.json');
@@ -35,15 +31,33 @@ const server = http.createServer((req, res) => {
         req.on("data", (chunk) => {
             body += chunk.toString();
         });
-        req.on("end", () => {
+        req.on("end", async () => {
             try {
                 const data = JSON.parse(body);
                 if (!data.username || !data.email || !data.password || !data.confirm_password)
                     return sendResp(400, "Missing required fields", res);
                 if (data.password !== data.confirm_password)
                     return sendResp(400, "Passwords do not match", res);
+
                 const users = JSON.parse(readFile(D_data_file));
-                users.push(data);
+                const userExists = users.find(user => user.username === data.username);
+                const emailExists = users.find(user => user.email === data.email);
+                if (userExists)
+                    return sendResp(400, "Username already exists", res);
+                if (emailExists)
+                    return sendResp(400, "Email already exists", res);
+
+                const hashedPassword = await bcrypt.hash(data.password, 10);
+
+                const newUser = {
+                    id: crypto.randomUUID(),
+                    username: data.username,
+                    email: data.email,
+                    password: hashedPassword,
+                    created_at: new Date().toISOString()
+                };
+
+                users.push(newUser);
                 writeFile(D_data_file, users);
 
                 sendResp(200, "User registered successfully", res);
