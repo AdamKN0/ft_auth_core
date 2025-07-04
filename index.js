@@ -1,3 +1,9 @@
+// {
+//     "username": "exampleUser",
+//     "email": "example@example.com",
+//     "password": "examplePassword",
+//     "confirm_password": "examplePassword"
+// }
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
@@ -32,10 +38,13 @@ const server = http.createServer((req, res) => {
         req.on("end", () => {
             try {
                 const data = JSON.parse(body);
-                if (!data.username || !data.email || !data.password || !data.confirmPassword)
+                if (!data.username || !data.email || !data.password || !data.confirm_password)
                     return sendResp(400, "Missing required fields", res);
-                if (data.password !== data.confirmPassword)
+                if (data.password !== data.confirm_password)
                     return sendResp(400, "Passwords do not match", res);
+                const users = JSON.parse(readFile(D_data_file));
+                users.push(data);
+                writeFile(D_data_file, users);
 
                 sendResp(200, "User registered successfully", res);
             } catch (error) {
