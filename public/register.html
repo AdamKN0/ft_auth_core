@@ -23,7 +23,7 @@
     <!-- Message box -->
     <div id="message" class="hidden text-center text-sm font-semibold py-2 px-4 mb-4 rounded-xl"></div>
 
-    <form id="signup-form" class="space-y-5">
+    <form id="signup-form" method="POST" action="/register">
       <div>
         <label class="block text-sm text-gray-700 mb-1">Username</label>
         <input name="username" type="text" required
@@ -38,14 +38,22 @@
 
       <div>
         <label class="block text-sm text-gray-700 mb-1">Password</label>
-        <input name="password" type="password" required
+        <input id="password" name="password" type="password" required
           class="w-full px-4 py-2 rounded-xl bg-blue-50 border border-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400" />
       </div>
 
       <div>
         <label class="block text-sm text-gray-700 mb-1">Confirm Password</label>
-        <input name="confirm" type="password" required
+        <input id="confirm-password" name="confirm" type="password" required
           class="w-full px-4 py-2 rounded-xl bg-blue-50 border border-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+      </div>
+
+      <!-- Show Password Checkbox -->
+      <div class="mt-2">
+        <label class="inline-flex items-center text-sm text-gray-700">
+          <input id="show-password" type="checkbox" class="mr-2" />
+          Show Passwords
+        </label>
       </div>
 
       <button type="submit"
@@ -63,15 +71,24 @@
   <script>
     const form = document.getElementById('signup-form');
     const messageBox = document.getElementById('message');
+    const showPasswordCheckbox = document.getElementById('show-password');
+    const passwordField = document.getElementById('password');
+    const confirmPasswordField = document.getElementById('confirm-password');
 
     function showMessage(text, type = 'success') {
       messageBox.textContent = text;
-      messageBox.className = text-center text-sm font-semibold py-2 px-4 mb-4 rounded-xl ${
+      messageBox.className = `text-center text-sm font-semibold py-2 px-4 mb-4 rounded-xl ${
         type === 'error' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'
-      };
+      }`;
       messageBox.classList.remove('hidden');
       setTimeout(() => messageBox.classList.add('hidden'), 5000);
     }
+
+    showPasswordCheckbox.addEventListener('change', () => {
+      const type = showPasswordCheckbox.checked ? 'text' : 'password';
+      passwordField.type = type;
+      confirmPasswordField.type = type;
+    });
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -80,17 +97,11 @@
       const email = data.get('email');
       const password = data.get('password');
       const confirm = data.get('confirm');
-
-      if (password !== confirm) {
-        showMessage("Passwords do not match", "error");
-        return;
-      }
-
       try {
         const res = await fetch('/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, email, password })
+          body: JSON.stringify({ username, email, password, confirm })
         });
 
         const result = await res.json();
