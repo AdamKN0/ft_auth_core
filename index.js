@@ -21,9 +21,9 @@ const writeFile = (filename, data) => fs.writeFileSync(filename, JSON.stringify(
 const generateVerificationCode = () => Math.floor(100000 + Math.random() * 900000).toString();
 
 const initFiles = () => {
-    if (!fs.existsSync(DATA_DIR)) 
+    if (!fs.existsSync(DATA_DIR))
         fs.mkdirSync(DATA_DIR, { recursive: true });
-    if (!fs.existsSync(USER_FILE)) 
+    if (!fs.existsSync(USER_FILE))
         fs.writeFileSync(USER_FILE, JSON.stringify([]), 'utf8');
 };
 
@@ -47,8 +47,15 @@ const server = http.createServer((req, res) => {
     if (req.method === 'GET' && req.url === '/') {
         res.writeHead(200, { 'Content-Type': 'text/html' });
         fs.createReadStream(path.join(PUBLIC_DIR, 'register.html')).pipe(res);
-    } 
-    
+    }
+    else if (req.method === 'GET' && req.url === '/verify') {
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        fs.createReadStream(path.join(PUBLIC_DIR, 'verify.html')).pipe(res);
+    }
+    else if (req.method === 'GET' && req.url === '/login') {
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        fs.createReadStream(path.join(PUBLIC_DIR, 'login.html')).pipe(res);
+    }
     else if (req.method === 'POST' && req.url === '/register') {
         let body = '';
         req.on('data', chunk => { body += chunk.toString(); });
@@ -93,13 +100,15 @@ const server = http.createServer((req, res) => {
                     return sendRes(res, 400, "Username already taken");
 
                 const hashedPassword = await bcrypt.hash(password, 10);
+                const code = generateVerificationCode();
+                const hashedVerificationCode = await bcrypt.hash(code, 10);
                 const user = {
                     id: crypto.randomUUID(),
                     username,
                     email,
                     password: hashedPassword,
                     createdAt: new Date().toISOString(),
-                    verificationCode: generateVerificationCode()
+                    verificationCode: hashedVerificationCode,
                 };
 
                 users.push(user);
@@ -109,7 +118,7 @@ const server = http.createServer((req, res) => {
                     from: `"MyApp Team" <${process.env.EMAIL_USER}>`,
                     to: user.email,
                     subject: 'Email Verification',
-                    html: `<p>Hello ${user.username},</p><p>Your verification code is: <strong>${user.verificationCode}</strong></p>`
+                    html: `<p>Hello ${user.username},</p><p>Your verification code is: <strong>${code}</strong></p>`
                 };
 
                 transporter.sendMail(mailOptions, (error, info) => {
@@ -126,8 +135,51 @@ const server = http.createServer((req, res) => {
                 sendRes(res, 500, "Internal Server Error");
             }
         });
-    } 
-    
+    }
+    else if (req.method === 'POST' && req.url === '/verify') {
+        let body = '';
+        req.on('data', chunk => { body += chunk.toString(); });
+
+        req.on('end', async () => {
+            try {
+                let verificationData;
+                try {
+                    verificationData = JSON.parse(body);
+                } catch (error) {
+                    return sendRes(res, 400, "Invalid JSON format");
+                }
+
+                const { email, code } = verificationData;
+                if (!email || !code)
+                    return sendRes(res, 400, "Email and verification code are required");
+
+                if (!validator.isEmail(email))
+                    return sendRes(res, 400, "Invalid email format");
+
+                let users = JSON.parse(readFile(USER_FILE));
+                const user = users.find(u => u.email === email);
+
+                if (!user)
+                    return sendRes(res, 404, "User not found");
+
+                const isCodeValid = await bcrypt.compare(code, user.verificationCode);
+                if (!isCodeValid)
+                    return sendRes(res, 400, "Invalid verification code");
+
+                user.verified = true;
+                writeFile(USER_FILE, users);
+
+                sendRes(res, 200, "Email verified successfully");
+            } catch (error) {
+                console.error("Internal error:", error);
+                sendRes(res, 500, "Internal Server Error");
+            }
+        });
+    }
+    else if (req.method === 'POST' && req.url === '/login') {
+        console.log("Login request received");
+    }
+
     else {
         sendRes(res, 404, "Not Found");
     }

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+
+<body
+    class="min-h-screen bg-gradient-to-br from-blue-100 via-blue-200 to-blue-300 flex items-center justify-center px-4">
+    <div
+        class="w-full max-w-md bg-white/70 backdrop-blur-xl p-8 rounded-3xl shadow-2xl border border-white/30 relative">
+        <h2 class="text-3xl font-semibold text-center text-blue-900 mb-6">Login to Your Account</h2>
+
+        <div id="message" class="hidden text-center text-sm font-semibold py-2 px-4 mb-4 rounded-xl"></div>
+
+        <form id="login-form" novalidate>
+            <div>
+                <label class="block text-sm text-gray-700 mb-1">Email</label>
+                <input name="email" type="email" required
+                    class="w-full px-4 py-2 rounded-xl bg-blue-50 border border-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+            </div>
+
+            <div class="mt-4">
+                <label class="block text-sm text-gray-700 mb-1">Password</label>
+                <input id="password" name="password" type="password" required
+                    class="w-full px-4 py-2 rounded-xl bg-blue-50 border border-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+            </div>
+
+            <div class="mt-2">
+                <label class="inline-flex items-center text-sm text-gray-700">
+                    <input id="show-password" type="checkbox" class="mr-2" />
+                    Show Password
+                </label>
+            </div>
+
+            <button type="submit"
+                class="w-full mt-6 py-2 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition duration-200">
+                Login
+            </button>
+        </form>
+
+        <p class="mt-6 text-center text-sm text-gray-600">
+            Don't have an account?
+            <a href="/" class="text-blue-500 hover:underline">Sign up here</a>
+        </p>
+        <p class="mt-2 text-center text-sm text-gray-600">
+            Need to verify your email?
+            <a href="/verify" class="text-blue-500 hover:underline">Verify here</a>
+        </p>
+    </div>
+
+    <script>
+        const form = document.getElementById('login-form');
+        const messageBox = document.getElementById('message');
+        const showPasswordCheckbox = document.getElementById('show-password');
+        const passwordField = document.getElementById('password');
+
+        function showMessage(text, type = 'success') {
+            messageBox.textContent = text;
+            messageBox.className = `text-center text-sm font-semibold py-2 px-4 mb-4 rounded-xl ${type === 'error' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'
+                }`;
+            messageBox.classList.remove('hidden');
+            setTimeout(() => messageBox.classList.add('hidden'), 5000);
+        }
+
+        showPasswordCheckbox.addEventListener('change', () => {
+            const type = showPasswordCheckbox.checked ? 'text' : 'password';
+            passwordField.type = type;
+        });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const data = new FormData(form);
+            const email = data.get('email');
+            const password = data.get('password');
+
+            try {
+                const res = await fetch('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const result = await res.json();
+                if (res.ok) {
+                    form.reset();
+                    showMessage(result.message, "success");
+                    setTimeout(() => {
+                        window.location.href = '/dashboard'; // Redirect to dashboard after successful login
+                    }, 2000);
+                } else {
+                    showMessage(result.message, "error");
+                }
+            } catch (err) {
+                showMessage("Something went wrong. Please try again later.", "error");
+            }
+        });
+    </script>
+</body>
+
+</html>
+[file content end]
